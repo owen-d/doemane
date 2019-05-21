@@ -23,6 +23,7 @@ dependencies:
 - base >= 4.7 && < 5
 - containers
 - parsec
+- optparse-applicative
 
 library:
   source-dirs: src
@@ -32,7 +33,7 @@ ghc-options:
   - -Werror
 
 executables:
-  doemane-exe:
+  doemane:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

@@ -1,8 +1,8 @@
 module Vocab
   ( Vocab.Parser.parseInput
-  , module Vocab.Symbols
+  , Symbols.Symbol(..)
   ) where
 
 import qualified Vocab.Parser
-import qualified Vocab.Symbols
+import qualified Vocab.Symbols as Symbols
 
