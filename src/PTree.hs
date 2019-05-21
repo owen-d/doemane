@@ -6,8 +6,10 @@ import qualified Data.Map.Strict as Map
 data PTree a = Empty | Node (Map a (PTree a))
   deriving (Show)
 
--- fromWords :: [[a]] -> PTree a
--- fromWords words =
+fromList :: Ord a => [[a]] -> PTree a
+fromList [] = Empty
+fromList xs =
+  foldl insert Empty xs
 
 insert :: Ord a => PTree a -> [a] -> PTree a
 insert tree []  = tree
