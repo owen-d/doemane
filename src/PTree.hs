@@ -4,30 +4,35 @@ import           Data.List       (foldl')
 import           Data.Map        (Map)
 import qualified Data.Map.Strict as Map
 
-data PTree a =
+data PTree k v =
   Node
-    { children :: Map a (PTree a)
+    { children     :: Map k (PTree k v)
+    , terminations :: [v]
     }
   deriving (Show, Eq)
 
-empty = Node Map.empty
+empty = Node {children = Map.empty, terminations = []}
 
-fromList :: (Ord a, Eq a) => [[a]] -> PTree a
+fromList :: (Ord k, Eq k, Eq v) => [([k], v)] -> PTree k v
 fromList [] = empty
 fromList xs =
-  foldl' insert empty xs
+  foldl' (\tree (keys, val) -> insert tree keys val) empty xs
 
-insert :: (Ord a, Eq a) => PTree a -> [a] -> PTree a
-insert tree []  = tree
-insert tree tokens
-  | (children tree) == Map.empty = Node $ newChild tokens
-  | otherwise = Node $ update tokens $ children tree
+insert :: (Ord k, Eq k, Eq v) => PTree k v -> [k] -> v -> PTree k v
+insert tree [] val = tree {terminations = (terminations tree) ++ [val]}
+insert tree tokens val
+  | (children tree) == Map.empty = tree {children = newChild tokens val}
+  | otherwise = tree {children = update tokens $ children tree}
   where
-    newChild []     = Map.empty
-    newChild (x:xs) = Map.singleton x (insert empty xs)
+    newChild [] _       = Map.empty
+    newChild (x:xs) val = Map.singleton x (insert empty xs val)
+    -- -- this shouldnt fire as the [] match on tokens should be exhausted by the first insert definition
     update [] children = children
-    update (x:xs) childMap =
-      Map.alter updater x childMap where
-      updater found = case found of
-        Nothing -> Just $ insert empty xs
-        Just a  -> Just $ insert a xs
+    update (x:xs) childMap = Map.alter updater x childMap
+      where
+        updater found =
+          case found of
+            Nothing -> Just $ insert empty xs val
+            Just a  -> Just $ insert a xs val
+
+-- x = fromList [(['a', 'b', 'c'], "abc"), (['a', 'b', 'c', 'd'], "abcd"), (['a', 'x', 'y'], "axy")]
