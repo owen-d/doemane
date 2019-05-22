@@ -5,7 +5,8 @@ import           Data.Map        (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe      (catMaybes)
 import           Data.Tuple      (swap)
-import           PTree           (PTree, fromList)
+import           PTree           (PTree)
+import qualified PTree
 import           Vocab           (parseInput)
 
 main :: IO ()
@@ -18,7 +19,7 @@ wordCache pairs =
 -- builds a wordCache and PTree from a parsed list of (sounds,word) pairs
 buildDatabases :: (Ord k, Eq k, Ord v, Eq v) => [([k], v)] -> (Map v [k], PTree k v)
 buildDatabases pairs =
-  (wordCache pairs, fromList pairs)
+  (wordCache pairs, PTree.fromList pairs)
 
 buildPairs :: (Ord a, Eq a) => [[a]] -> [([a], a)]
 buildPairs lines =
@@ -35,5 +36,5 @@ run conf = do
     Right parsed' -> fn parsed'
   where
     fn lines = do
-      let (cache, _) = buildDatabases $ buildPairs $ take 5 lines
-      print cache
+      let (cache, tree) = buildDatabases $ buildPairs lines
+      print $ Map.lookup "BARE" cache >>= (PTree.find tree)
