@@ -35,4 +35,24 @@ insert tree tokens val
             Nothing -> Just $ insert empty xs val
             Just a  -> Just $ insert a xs val
 
--- x = fromList [(['a', 'b', 'c'], "abc"), (['a', 'b', 'c', 'd'], "abcd"), (['a', 'x', 'y'], "axy")]
+find :: (Ord k, Eq k, Eq v) => PTree k v -> [k] -> Maybe [[v]]
+find tree ks = findWithRoot tree tree ks
+
+-- findWithRoot keeps a reference to the root of the tree so that it can re-descend upon
+-- reaching early terminations (i.e. 'domain' -> [['domain'], ['doe', 'mane']'])
+findWithRoot :: (Ord k, Eq k, Eq v) => PTree k v -> PTree k v -> [k] -> Maybe [[v]]
+-- take terminations=[word1, word2] -> [[word1], [word2]] for consistency in return fmt
+findWithRoot _ (Node {terminations = terms}) [] =
+  if (terms == [])
+    then Nothing
+    else Just $ map (\x -> [x]) terms
+findWithRoot root tree (k:ks) = prefixMatches tree <> childMatches
+  where
+    childMatches =
+      Map.lookup k (children tree) >>= \found -> findWithRoot root found ks
+    prefixMatches Node {terminations = terms}
+      | terms == [] = Nothing
+      | otherwise =
+        fmap (\matches -> [x : ys | x <- terms, ys <- matches]) subMatches
+      where
+        subMatches = findWithRoot root root (k : ks)
