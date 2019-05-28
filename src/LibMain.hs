@@ -1,13 +1,19 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module LibMain where
 
-import           CLI             (Config (dictionary), runConfig)
-import           Data.Map        (Map)
-import qualified Data.Map.Strict as Map
-import           Data.Maybe      (catMaybes)
-import           Data.Tuple      (swap)
-import           PTree           (PTree)
+
+import           CLI                        (Config (dictionary), runConfig)
+import           Data.Aeson                 (FromJSON, ToJSON, encode)
+import qualified Data.ByteString.Lazy.Char8 as CL
+import           Data.Map                   (Map)
+import qualified Data.Map.Strict            as Map
+import           Data.Maybe                 (catMaybes, fromMaybe)
+import           Data.Tuple                 (swap)
+import           GHC.Generics               (Generic)
+import           PTree                      (PTree)
 import qualified PTree
-import           Vocab           (parseInput)
+import           Vocab                      (parseInput)
 
 main :: IO ()
 main = runConfig run
@@ -28,13 +34,39 @@ buildPairs lines =
     mapper []            = Nothing
     mapper (word:sounds) = Just (sounds,word)
 
+every :: Int -> [a] -> [a]
+every _ []     = []
+every n (x:xs) = x : (every n $ drop n xs)
+
+
+data Result =
+  Result
+    { sounds  :: [String]
+    , matches :: [[String]]
+    , sources :: [String]
+    }
+  deriving (Show, Generic)
+
+instance ToJSON Result
+instance FromJSON Result
+
 run :: Config -> IO ()
 run conf = do
-  parsed <- parseInput . dictionary $ conf
+  parsed <- (parseInput . dictionary) conf
   case parsed of
     Left e        -> print e
     Right parsed' -> fn parsed'
   where
+    joinPairs (s1, w1) (s2, w2) =
+      Result {sounds = s1 ++ s2, matches = [], sources = [w1, w2]}
     fn lines = do
-      let (cache, tree) = buildDatabases $ buildPairs lines
-      print $ Map.lookup "BARE" cache >>= (PTree.find tree)
+      let pairs = buildPairs lines
+      let (_, tree) = buildDatabases pairs
+      let smallWords = every 5 $ filter (\(w, _) -> length w < 7) pairs
+      let twos = [joinPairs x y | x <- smallWords, y <- smallWords]
+      let res =
+            map
+              (\r -> r {matches = fromMaybe [] $ PTree.find tree (sounds r)})
+              twos
+      let res' = filter (\x -> (matches x) /= []) res
+      CL.putStrLn $ encode $ take 5 res'

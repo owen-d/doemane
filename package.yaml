@@ -24,6 +24,8 @@ dependencies:
 - containers
 - parsec
 - optparse-applicative
+- aeson
+- bytestring
 
 library:
   source-dirs: src
