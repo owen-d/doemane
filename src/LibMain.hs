@@ -1,11 +1,15 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 module LibMain where
 
 
 import           CLI                        (Config (dictionary), runConfig)
-import           Data.Aeson                 (FromJSON, ToJSON, encode)
+import           Data.Aeson                 (FromJSON, ToJSON (..), encode,
+                                             object, (.=))
 import qualified Data.ByteString.Lazy.Char8 as CL
+import           Data.List                  ((\\))
 import           Data.Map                   (Map)
 import qualified Data.Map.Strict            as Map
 import           Data.Maybe                 (catMaybes, fromMaybe)
@@ -47,7 +51,12 @@ data Result =
     }
   deriving (Show, Generic)
 
-instance ToJSON Result
+instance ToJSON Result where
+  toJSON r = object [
+    "sources" .= sources r,
+    "matches" .= ((matches r) \\ [(sources r)])  ]
+
+-- instance ToJSON Result
 instance FromJSON Result
 
 run :: Config -> IO ()
