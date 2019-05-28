@@ -6,8 +6,7 @@ module LibMain where
 
 
 import           CLI                        (Config (dictionary), runConfig)
-import           Data.Aeson                 (FromJSON, ToJSON (..), encode,
-                                             object, (.=))
+import           Data.Aeson                 (FromJSON, ToJSON, encode)
 import qualified Data.ByteString.Lazy.Char8 as CL
 import           Data.List                  ((\\))
 import           Data.Map                   (Map)
@@ -51,13 +50,8 @@ data Result =
     }
   deriving (Show, Generic)
 
-instance ToJSON Result where
-  toJSON r = object [
-    "sources" .= sources r,
-    "matches" .= ((matches r) \\ [(sources r)])  ]
-
--- instance ToJSON Result
 instance FromJSON Result
+instance ToJSON Result
 
 run :: Config -> IO ()
 run conf = do
@@ -66,16 +60,23 @@ run conf = do
     Left e        -> print e
     Right parsed' -> fn parsed'
   where
-    joinPairs (s1, w1) (s2, w2) =
-      Result {sounds = s1 ++ s2, matches = [], sources = [w1, w2]}
     fn lines = do
       let pairs = buildPairs lines
       let (_, tree) = buildDatabases pairs
       let smallWords = every 5 $ filter (\(w, _) -> length w < 7) pairs
       let twos = [joinPairs x y | x <- smallWords, y <- smallWords]
       let res =
-            map
-              (\r -> r {matches = fromMaybe [] $ PTree.find tree (sounds r)})
-              twos
+            map (mkResult tree) twos
       let res' = filter (\x -> (matches x) /= []) res
-      CL.putStrLn $ encode $ take 5 res'
+      print $ take 10 $ res'
+      mapM_ (CL.putStrLn . encode) res'
+      -- CL.putStrLn $ encode $ take 10 res'
+      where
+        joinPairs (s1, w1) (s2, w2) =
+          ([w1, w2], s1 ++ s2)
+        mkResult tree (w, s) = Result {
+          sounds = s
+          , matches = (fromMaybe [] (PTree.find tree s)) \\ [w]
+          , sources = w
+          }
+
