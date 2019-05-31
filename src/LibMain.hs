@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
@@ -7,15 +8,16 @@ module LibMain where
 import           CLI                        (Config (dictionary), runConfig)
 import qualified CLI
 import           Data.Aeson                 (encode)
+import           Data.Aeson                 (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy.Char8 as CL
 import           Data.List                  ((\\))
 import           Data.Map                   (Map)
 import qualified Data.Map.Strict            as Map
 import           Data.Maybe                 (catMaybes, fromMaybe)
 import           Data.Tuple                 (swap)
+import           GHC.Generics               (Generic)
 import           PTree                      (PTree)
 import qualified PTree
-import           Repl                       (Result (..))
 import qualified Repl
 import           Vocab                      (parseInput)
 import qualified Vocab
@@ -54,7 +56,7 @@ run conf = do
       let (cache, tree) = buildDatabases pairs
       if CLI.discover conf
         then discover cache tree
-        else Repl.run cache tree
+        else Repl.main cache tree
 
 discover :: Map [Char] [String] -> PTree String String -> IO ()
 discover cache tree = do
@@ -76,3 +78,14 @@ discover cache tree = do
         , matches = (fromMaybe [] (PTree.find tree s)) \\ [w]
         , sources = w
         }
+
+data Result =
+  Result
+    { sounds  :: [String]
+    , matches :: [[String]]
+    , sources :: [String]
+    }
+  deriving (Show, Generic)
+
+instance FromJSON Result
+instance ToJSON Result
