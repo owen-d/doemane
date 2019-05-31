@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
@@ -6,16 +5,18 @@ module LibMain where
 
 
 import           CLI                        (Config (dictionary), runConfig)
-import           Data.Aeson                 (FromJSON, ToJSON, encode)
+import qualified CLI
+import           Data.Aeson                 (encode)
 import qualified Data.ByteString.Lazy.Char8 as CL
 import           Data.List                  ((\\))
 import           Data.Map                   (Map)
 import qualified Data.Map.Strict            as Map
 import           Data.Maybe                 (catMaybes, fromMaybe)
 import           Data.Tuple                 (swap)
-import           GHC.Generics               (Generic)
 import           PTree                      (PTree)
 import qualified PTree
+import           Repl                       (Result (..))
+import qualified Repl
 import           Vocab                      (parseInput)
 import qualified Vocab
 
@@ -43,43 +44,35 @@ every _ []     = []
 every n (x:xs) = x : (every n $ drop (n - 1) xs)
 
 
-data Result =
-  Result
-    { sounds  :: [String]
-    , matches :: [[String]]
-    , sources :: [String]
-    }
-  deriving (Show, Generic)
-
-instance FromJSON Result
-instance ToJSON Result
-
 run :: Config -> IO ()
 run conf = do
   parsed <- (parseInput . dictionary) conf
   case parsed of
-    Left e        -> print e
-    Right parsed' -> fn parsed'
-  where
-    fn lines = do
-      let pairs = buildPairs lines
+    Left e -> print e
+    Right parsed' -> do
+      let pairs = buildPairs parsed'
       let (cache, tree) = buildDatabases pairs
-      let smallWords =
-            every 20 $
-            filter (\(w, _) -> length w < 7) $
-            catMaybes $ map (lookupWord cache) Vocab.common
-      let twos = [joinPairs x y | x <- smallWords, y <- smallWords]
-      let res = map (mkResult tree) twos
-      let res' = filter (\x -> (matches x) /= []) res
-      print $ length smallWords
-      print $ length twos
-      mapM_ (CL.putStrLn . encode) res'
-      where
-        joinPairs (s1, w1) (s2, w2) = ([w1, w2], s1 ++ s2)
-        lookupWord cache w = (\s -> (s, w)) <$> Map.lookup w cache
-        mkResult tree (w, s) =
-          Result
-            { sounds = s
-            , matches = (fromMaybe [] (PTree.find tree s)) \\ [w]
-            , sources = w
-            }
+      if CLI.discover conf
+        then discover cache tree
+        else Repl.run cache tree
+
+discover :: Map [Char] [String] -> PTree String String -> IO ()
+discover cache tree = do
+  let smallWords =
+        take 100 $
+        every 20 $
+        filter (\(w, _) -> length w < 7) $
+        catMaybes $ map (lookupWord cache) Vocab.common
+  let twos = [joinPairs x y | x <- smallWords, y <- smallWords]
+  let res = map (mkResult tree) twos
+  let res' = filter (\x -> (matches x) /= []) res
+  mapM_ (CL.putStrLn . encode) res'
+  where
+    joinPairs (s1, w1) (s2, w2) = ([w1, w2], s1 ++ s2)
+    lookupWord cache w = (\s -> (s, w)) <$> Map.lookup w cache
+    mkResult tree (w, s) =
+      Result
+        { sounds = s
+        , matches = (fromMaybe [] (PTree.find tree s)) \\ [w]
+        , sources = w
+        }

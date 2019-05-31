@@ -6,6 +6,7 @@ import           Options.Applicative
 data Config = Config
   { dictionary :: FilePath
   , quiet      :: Bool
+  , discover   :: Bool
   }
   deriving (Show)
 
@@ -20,6 +21,10 @@ config = Config
       ( long "quiet"
         <> short 'q'
         <> help "Whether to be quiet" )
+      <*> switch
+      ( long "discover"
+        <> help "discover homophone groups instead of launching repl" )
+
 
 runConfig :: (Config -> IO ())-> IO ()
 runConfig f = f =<< execParser opts
