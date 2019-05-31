@@ -26,6 +26,8 @@ dependencies:
 - optparse-applicative
 - aeson
 - bytestring
+- brick
+- vty
 
 library:
   source-dirs: src
