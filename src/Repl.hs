@@ -24,8 +24,13 @@ allowed = ['a'..'z'] ++ ['A'..'Z'] ++ [' ']
 
 eval :: Map String [String] -> PTree String String -> [String] -> [[String]]
 eval cache tree ws =
-  let sounds = concat . catMaybes $ map lookupWord ws
-  in (fromMaybe [] (PTree.find tree sounds)) \\ [ws]
+  let
+    resolved = map lookupWord ws
+    sounds = (concat . catMaybes)  resolved
+  in
+    -- if only partially matched a sequence of words, yield nothing
+    if Nothing `elem` resolved then [] else
+      (fromMaybe [] (PTree.find tree sounds)) \\ [ws]
   where
     lookupWord w = Map.lookup w cache
 
