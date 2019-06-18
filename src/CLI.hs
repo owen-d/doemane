@@ -31,5 +31,4 @@ runConfig f = f =<< execParser opts
   where
     opts = info (config <**> helper)
       ( fullDesc
-     <> progDesc "TODO: desc"
-     <> header "hello - a test for optparse-applicative" )
+     <> progDesc "Discover homophones!")
